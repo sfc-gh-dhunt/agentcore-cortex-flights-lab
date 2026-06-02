@@ -1,0 +1,8 @@
+bedrock-agentcore
+bedrock-agentcore-starter-toolkit
+boto3
+strands-agents
+strands-agents-tools
+strands-agents[anthropic]
+pyyaml
+requests

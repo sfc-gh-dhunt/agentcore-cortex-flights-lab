@@ -1,0 +1,14 @@
+# agentcore-cortex-flights-lab
+
+settings.json
+.env
+# Local config holds the PAT - never commit it
+agentcore/config.yaml
+*.pat
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+venv/
+
+.snowflake/

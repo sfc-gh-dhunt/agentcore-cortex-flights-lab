@@ -1,0 +1,28 @@
+# Configuration for the Snowflake MCP -> Bedrock AgentCore agent.
+# Copy this file to config.yaml (same directory) and fill in your values.
+# config.yaml is git-ignored because it contains a credential.
+
+snowflake:
+  # Org-account identifier in <orgname>-<account_name> format
+  # (Snowsight -> bottom-left account menu). Do NOT use the account locator.
+  account: <your-org>-<your-account>
+  user: <your-snowflake-user>
+  # Programmatic Access Token (PAT). Looks like eyJ...  Treat as a secret.
+  pat_token: <your-PAT-token>
+  database: <database-containing-your-mcp-server>
+  schema: <schema-containing-your-mcp-server>
+  # Warehouse is optional for the Cortex-Agent path (the agent/analyst tools carry
+  # their own execution context); include if your tools require it.
+  warehouse: <your-warehouse>
+
+mcp:
+  # Name of the Snowflake-managed MCP server to connect to.
+  server_name: <your-mcp-server-name>
+  # Optional: restrict which MCP tools are exposed to the model. Omit to expose all.
+  # For a question-to-answer experience, list only your Cortex Agent tool, e.g.:
+  # tools:
+  #   - <your-cortex-agent-tool-name>
+
+aws:
+  # Amazon Location Service place index used by the geocode_address tool.
+  place_index_name: agentcore-index
