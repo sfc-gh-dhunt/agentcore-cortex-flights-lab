@@ -26,7 +26,7 @@ You should see `AIRPORT_LHR` and `AIRPORT_LGW`, and a list of airlines with flig
 ## Part B: AWS
 
 1. Open the AWS Console -> **EC2** -> **Instances**.
-2. Select the instance whose name ends in `-ec2`, choose **Connect** -> **Session Manager** -> **Connect**.
+2. Select the instance whose name ends in `-ec2`, choose **Connect** -> **Session Manager** tab -> **Connect**.
 3. In the terminal, confirm the tooling:
 
 ```bash

@@ -83,12 +83,12 @@ It reads everything from `config.yaml` - the same agent works against any Snowfl
 
 ## Quick Start (on the EC2 instance)
 
-Connect via Session Manager (stay as the default `ssm-user`; don't `sudo` to another user or override `HOME` - the instance's pre-configured AWS profile has the deploy permissions). The instance has no `git`, so download a tarball:
+Connect to the EC2 instance: AWS Console -> **EC2** -> **Instances** -> select the `*-ec2` instance -> **Connect** -> **Session Manager** tab -> **Connect**. Stay as the default `ssm-user` (don't `sudo` to another user or override `HOME` - the instance's pre-configured AWS profile has the deploy permissions). The instance has no `git`, so download a tarball:
 
 ```sh
 export HOME=/home/ssm-user
 cd ~
-REPO_TGZ="https://github.com/<org>/<repo>/archive/refs/heads/main.tar.gz"
+REPO_TGZ="https://github.com/sfc-gh-dhunt/agentcore-cortex-flights-lab/archive/refs/heads/main.tar.gz"
 curl -fsSL "$REPO_TGZ" -o lab.tgz && TOP=$(tar tzf lab.tgz | head -1) && tar xzf lab.tgz && cd "${TOP}agentcore"
 cp config.yaml.example config.yaml   # then edit: account, PAT, database, schema, MCP server name
 export AGENT_MODEL_ID=us.anthropic.claude-sonnet-4-6

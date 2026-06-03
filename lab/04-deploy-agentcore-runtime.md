@@ -2,7 +2,7 @@
 
 Deploy the agent to **Amazon Bedrock AgentCore Runtime**. It connects to the Snowflake MCP server from section 03 and to Amazon Location Service for geocoding.
 
-**Where:** the workshop EC2 instance, via AWS Console -> EC2 -> Instances -> select the `*-ec2` instance -> **Connect** -> **Session Manager**.
+**Where:** the workshop EC2 instance. In the AWS Console go to **EC2** -> **Instances** -> select the `*-ec2` instance -> **Connect** -> **Session Manager** tab -> **Connect**.
 
 > Important environment notes (read first):
 > - **Stay as the default `ssm-user`.** Do not `sudo su` to another user - the deploy writes local files, and switching users causes `Permission denied` on files owned by `ssm-user`.
@@ -14,9 +14,9 @@ Deploy the agent to **Amazon Bedrock AgentCore Runtime**. It connects to the Sno
 ```sh
 export HOME=/home/ssm-user
 cd ~
-REPO_TGZ="https://github.com/<org>/<repo>/archive/refs/heads/main.tar.gz"   # <-- set your repo
+REPO_TGZ="https://github.com/sfc-gh-dhunt/agentcore-cortex-flights-lab/archive/refs/heads/main.tar.gz"
 curl -fsSL "$REPO_TGZ" -o lab.tgz
-TOP=$(tar tzf lab.tgz | head -1)        # e.g. <repo>-main/
+TOP=$(tar tzf lab.tgz | head -1)        # agentcore-cortex-flights-lab-main/
 tar xzf lab.tgz
 cd "${TOP}agentcore"
 pwd && ls
