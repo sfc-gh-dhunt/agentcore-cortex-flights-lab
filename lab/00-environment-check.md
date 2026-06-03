@@ -30,9 +30,9 @@ You should see `AIRPORT_LHR` and `AIRPORT_LGW`, and a list of airlines with flig
 3. In the terminal, confirm the tooling:
 
 ```bash
-agentcore --version
-echo "AGENT_MODEL_ID=$AGENT_MODEL_ID"   # should be a Claude inference profile, e.g. us.anthropic.claude-...
-aws sts get-caller-identity
+agentcore --help | head -5            # confirms the AgentCore CLI is installed
+echo "AGENT_MODEL_ID=$AGENT_MODEL_ID"  # if empty, set it before deploy: export AGENT_MODEL_ID=us.anthropic.claude-sonnet-4-6
+aws sts get-caller-identity            # confirms AWS credentials are present
 ```
 
 4. Confirm Amazon Bedrock model access in your region: Bedrock console -> **Model catalog** -> any Anthropic Claude model should show **Available** (handled by the workshop stack).
@@ -44,7 +44,7 @@ You will build the Snowflake side (semantic view -> Cortex Agent -> MCP server),
 | If this works... | ...you're ready for |
 |---|---|
 | Airlines query returns rows | [01 - Create Semantic View](01-create-semantic-view.md) |
-| `agentcore --version` prints a version | [04 - Deploy to AgentCore Runtime](04-deploy-agentcore-runtime.md) |
+| `agentcore --help` prints commands | [04 - Deploy to AgentCore Runtime](04-deploy-agentcore-runtime.md) |
 
 ---
 

@@ -1,62 +1,63 @@
 # 05 - Test End-to-End
 
-Invoke the deployed agent and watch the full flow: your prompt -> Bedrock agent (router) -> Snowflake Cortex Agent (runs Analyst + executes SQL) -> answer. Address prompts also call Amazon Location Service.
+Invoke the deployed agent and watch the full flow: your prompt -> Bedrock agent (router) -> Snowflake Cortex Agent (runs Analyst + executes SQL) -> answer. Address prompts call Amazon Location Service.
 
-**Where:** the EC2 instance (Session Manager), from `agentcore-cortex-flights-lab/agentcore`.
+**Where:** the EC2 instance (Session Manager), from the `agentcore` directory you deployed from (where `.bedrock_agentcore.yaml` lives).
 
-## Step 1: Start the interactive client
+## Option A: `agentcore invoke` (simplest)
 
-```bash
-cd ~/agentcore-cortex-flights-lab/agentcore
-python3 invoke_agentcore.py
+```sh
+# Data question -> answered end-to-end by the Cortex Agent
+agentcore invoke '{"prompt": "Which airline had the most delays at LHR in the last 7 days?"}'
+
+# Geocoding -> Amazon Location Service
+agentcore invoke '{"prompt": "What are the coordinates of London Heathrow Airport?"}'
 ```
 
-The client reads the runtime ARN from `.bedrock_agentcore.yaml`. You can also pass `--arn <runtime-arn>` or set `AGENT_RUNTIME_ARN`.
+The data question returns a written answer (often a table) sourced from Snowflake - no SQL is shown, because the Cortex Agent runs and executes it server-side. The geocode prompt returns latitude/longitude plus a label.
 
-## Step 2: Ask data questions (answered by the Cortex Agent)
-
-These go to `flight-ops-agent`, which runs Cortex Analyst, executes the SQL inside Snowflake, and returns a complete answer:
+More example prompts:
 
 ```
-Which airline had the most delays at LHR in the last 7 days?
 What is the average departure delay by airline?
 Which gates have the longest average dwell time?
 Compare morning vs afternoon traffic volumes.
 ```
 
-You should get a written answer (often with a table). The agent does not show intermediate SQL - the Cortex Agent handles that server-side.
+## Option B: interactive client
 
-## Step 3: Test geocoding (Amazon Location Service)
-
-```
-What are the coordinates of London Heathrow Airport?
-Geocode: Nelson Road, Hounslow, London TW6
-```
-
-The agent calls `geocode_address` and returns latitude/longitude plus a label.
-
-## Step 4: One-shot (non-interactive) invoke
-
-```bash
+```sh
+python3 invoke_agentcore.py
+# or one-shot:
 python3 invoke_agentcore.py --prompt "Which airlines have the most flights?"
 ```
 
+It reads the runtime ARN from `.bedrock_agentcore.yaml` (or pass `--arn`).
+
 ## Debugging
 
-**Agent returns a connectivity / empty-data error**
-- Re-run the `tools/list` curl from section 04 step 3. If it fails, the PAT, account format, or grants are the issue - not the agent.
+**`AccessDenied` on `aws-marketplace:*` or `geo:*`**
+- Run `sh fix_permissions.sh` and wait 30-60s for IAM propagation, then retry.
+
+**SSL / hostname error talking to Snowflake**
+- The account identifier has underscores. The agent converts them to hyphens automatically; if you changed the code, ensure the URL host uses hyphens.
 
 **`Invalid length for parameter modelId`**
 - `AGENT_MODEL_ID` was empty at deploy time. Re-run `agentcore launch --env AGENT_MODEL_ID=$AGENT_MODEL_ID`.
 
-**`AccessDenied` on `geo:SearchPlaceIndexForText` or `aws-marketplace:*`**
-- Run `./fix_permissions.sh` and wait 30-60s for IAM propagation, then retry.
+**Connectivity / empty data**
+- Re-run the `tools/list` curl from section 04 step 3. If that fails, the PAT, account format, or grants are the issue - not the agent.
 
-**500 error / agent exception**
-- Check CloudWatch logs for the runtime (Bedrock AgentCore -> your runtime -> Logs), or run `agentcore launch` again after editing `config.yaml`.
+**`Permission denied` writing `.bedrock_agentcore.yaml`**
+- You switched Linux users or changed `HOME`. Work as `ssm-user` from a directory you own (your home), and don't override `HOME`.
 
-**Changes to config.yaml or the agent not taking effect**
-- Redeploy: `agentcore launch --env AGENT_MODEL_ID=$AGENT_MODEL_ID` (rebuilds and pushes a new image).
+**Changes not taking effect**
+- Edit `config.yaml`, then redeploy: `agentcore launch --env AGENT_MODEL_ID=$AGENT_MODEL_ID` (rebuilds the image).
+
+**Tail runtime logs**
+```sh
+aws logs tail /aws/bedrock-agentcore/runtimes/<agent-id>-DEFAULT --since 15m
+```
 
 ## What you built
 

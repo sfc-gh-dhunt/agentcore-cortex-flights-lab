@@ -1,134 +1,105 @@
 # 04 - Deploy to AgentCore Runtime
 
-Deploy the agent to **Amazon Bedrock AgentCore Runtime**. The agent connects to the Snowflake MCP server you created in section 03 and to Amazon Location Service for geocoding.
+Deploy the agent to **Amazon Bedrock AgentCore Runtime**. It connects to the Snowflake MCP server from section 03 and to Amazon Location Service for geocoding.
 
 **Where:** the workshop EC2 instance, via AWS Console -> EC2 -> Instances -> select the `*-ec2` instance -> **Connect** -> **Session Manager**.
 
-## Step 1: Get the code onto the instance
+> Important environment notes (read first):
+> - **Stay as the default `ssm-user`.** Do not `sudo su` to another user - the deploy writes local files, and switching users causes `Permission denied` on files owned by `ssm-user`.
+> - **Do not override `HOME`.** The instance ships with pre-configured AWS credentials (a default profile that has deploy permissions). If you change `HOME`, the CLI falls back to the EC2 instance role, which cannot create ECR/runtime resources.
+> - The instance has **no `git`** - we download a release tarball with `curl` instead.
 
-```bash
+## Step 1: Download the lab (no git required)
+
+```sh
+export HOME=/home/ssm-user
 cd ~
-git clone <repo-url> agentcore-cortex-flights-lab
-cd agentcore-cortex-flights-lab/agentcore
+REPO_TGZ="https://github.com/<org>/<repo>/archive/refs/heads/main.tar.gz"   # <-- set your repo
+curl -fsSL "$REPO_TGZ" -o lab.tgz
+TOP=$(tar tzf lab.tgz | head -1)        # e.g. <repo>-main/
+tar xzf lab.tgz
+cd "${TOP}agentcore"
+pwd && ls
 ```
 
-## Step 2: Create your config.yaml
+## Step 2: Configure your Snowflake connection
 
-```bash
+```sh
 cp config.yaml.example config.yaml
 nano config.yaml
 ```
 
-Fill in your values from the previous sections:
+Fill in your values from sections 01-03:
 
 ```yaml
 snowflake:
-  account: <YOUR_SNOWFLAKE_ACCOUNT>   # org-account format, e.g. myorg-myaccount (NOT the account locator)
-  user: <your-user>                  # e.g. user1
-  pat_token: <your-PAT-token>        # the token from section 03 step 4 (eyJ...)
+  account: <YOUR_SNOWFLAKE_ACCOUNT>     # org-account format, e.g. myorg-myaccount (NOT the locator). Underscores are auto-converted to hyphens.
+  user: <your-user>                     # e.g. user1
+  pat_token: <your-PAT-token>           # from section 03 (eyJ...)
   database: AIRPORT_LHR
   schema: LAB_<YOUR_ID>
   warehouse: AVIA_LHR_WH
-
 mcp:
   server_name: FLIGHT_OPS_MCP_<YOUR_ID>
-  # Expose only the Cortex Agent tool so answers come back end-to-end (question-to-answer):
   tools:
-    - flight-ops-agent
-
+    - flight-ops-agent                  # expose only the Cortex Agent -> question-to-answer
 aws:
   place_index_name: agentcore-index
 ```
 
-Save and exit (Ctrl+X, Y, Enter).
-
-> **Common mistake:** using the account locator (e.g. `abc12345`) instead of the org-account format (`<org>-<account>`). PATs only work with the org-account format.
-
 ## Step 3: Verify connectivity to Snowflake
 
-```bash
-# Base host should return 302 (redirect) - this is normal
-curl -s -o /dev/null -w "%{http_code}\n" --max-time 10 \
-  "https://<YOUR_SNOWFLAKE_ACCOUNT>.snowflakecomputing.com"
-
-# MCP server should list your tools
+```sh
+PAT=$(grep 'pat_token:' config.yaml | awk '{print $2}')
+ACCT=$(grep 'account:' config.yaml | awk '{print $2}' | tr '_' '-')   # hyphens for the URL host
 curl -s --max-time 15 -X POST \
-  "https://<YOUR_SNOWFLAKE_ACCOUNT>.snowflakecomputing.com/api/v2/databases/AIRPORT_LHR/schemas/LAB_<YOUR_ID>/mcp-servers/FLIGHT_OPS_MCP_<YOUR_ID>" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "Authorization: Bearer <your-PAT-token>" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+  "https://${ACCT}.snowflakecomputing.com/api/v2/databases/AIRPORT_LHR/schemas/LAB_<YOUR_ID>/mcp-servers/FLIGHT_OPS_MCP_<YOUR_ID>" \
+  -H "Content-Type: application/json" -H "Accept: application/json, text/event-stream" \
+  -H "Authorization: Bearer ${PAT}" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | head -c 400; echo
 ```
 
-You should see `flight-ops-agent` (and `flight-ops-analyst`) in the response.
+You should see `flight-ops-agent` in the response. If you get a TLS/hostname error, your account has underscores - the agent code converts them to hyphens automatically, but this manual `curl` needs the hyphen form (the `tr` above handles it).
 
-- `Programmatic access token is invalid` -> using the locator instead of org-account format, or the PAT expired.
-- `Network policy is required` -> a network policy must permit the caller IP (an account-level allow-all policy covers any EC2 IP).
-- `does not exist or not authorized` -> re-check the grants from sections 01-03.
+## Step 4: Set the model id
 
-## Step 4: Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-## Step 5: Configure the AgentCore CLI
-
-```bash
-agentcore configure
-```
-
-Recommended answers:
-
-| Prompt | Answer |
-|---|---|
-| Entrypoint | `snowflake_mcp_agentcore.py` |
-| Agent name | press Enter to accept the default |
-| Dependency file | `requirements.txt` (Enter) |
-| Deployment type | `1` (Container) |
-| Execution role | press Enter (auto-create) |
-| ECR Repository | press Enter (auto-create) |
-| OAuth authorizer | `no` (use default IAM authorization) |
-| Request header allowlist | `no` |
-| Memory setup | press Enter (create short-term memory) |
-| Long-term memory | `no` |
-
-Verify at any time with `agentcore configure list`.
-
-## Step 6: Deploy
-
-The model id is set during instance startup. Confirm it, then launch:
-
-```bash
+```sh
 echo "AGENT_MODEL_ID=$AGENT_MODEL_ID"
-# If empty, set one for your region, e.g.:
-# export AGENT_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0
+# If empty, set it (US regions):
+export AGENT_MODEL_ID=us.anthropic.claude-sonnet-4-6
+```
 
+## Step 5: Configure AgentCore (non-interactive)
+
+```sh
+agentcore configure -e snowflake_mcp_agentcore.py -rf requirements.txt -r us-east-1 -ni
+```
+
+This auto-creates the execution role + ECR repo, sets up short-term memory, and writes `.bedrock_agentcore.yaml`. (No local Docker needed - the build runs in CodeBuild.)
+
+## Step 6: Launch
+
+```sh
 agentcore launch --env AGENT_MODEL_ID=$AGENT_MODEL_ID
 ```
 
-This builds an ARM64 container with CodeBuild, pushes it to ECR, and creates the runtime endpoint + short-term memory. The first deploy takes ~5-8 minutes.
+First deploy builds an ARM64 image in CodeBuild and creates the runtime (a couple of minutes). Success ends with `Deployment completed successfully` and an **Agent ARN**.
 
-> **Important:** `AGENT_MODEL_ID` must have a value at deploy time, or the agent fails at invocation with `Invalid length for parameter modelId`.
-
-### Verify in the console
-- **Bedrock AgentCore -> Agent Runtime**: your agent shows **Status: READY**.
-- **Bedrock AgentCore -> Memory**: a `*_mem` resource shows **Status: ACTIVE**.
-- **ECR -> Repositories**: a `bedrock-agentcore-*` repo with a timestamped image.
+> A `Transaction Search configuration failed ... logs:PutResourcePolicy` warning is **harmless** (optional observability) - the agent deploys and runs fine.
 
 ## Step 7: Fix runtime permissions (run once)
 
-The auto-created execution role lacks two permissions this agent needs:
-- `geo:SearchPlaceIndexForText` - Amazon Location geocoding
-- `aws-marketplace:ViewSubscriptions` / `Subscribe` - Bedrock checks the Anthropic Claude marketplace subscription on each model call
+The auto-created runtime role needs two extra permissions: `geo:SearchPlaceIndexForText` (geocoding) and `aws-marketplace:ViewSubscriptions`/`Subscribe` (Bedrock checks the Claude marketplace subscription per call).
 
-```bash
-./fix_permissions.sh
+```sh
+sh fix_permissions.sh
 ```
 
-The script auto-detects the runtime role from `.bedrock_agentcore.yaml` and attaches both inline policies. You only need to run it once; permissions persist across redeploys.
+It auto-detects the **Runtime** execution role from `.bedrock_agentcore.yaml`. Allow 10-60s for IAM propagation before invoking.
 
-> **IAM propagation:** role changes take 10-60s to propagate. If a first invoke hits `AccessDenied` on `geo:` or the marketplace actions, wait 30s and retry.
+### Verify in the console (optional)
+- **Bedrock AgentCore -> Agent Runtime**: your agent shows **READY**.
+- **ECR -> Repositories**: a `bedrock-agentcore-*` repo with an image.
 
 ---
 

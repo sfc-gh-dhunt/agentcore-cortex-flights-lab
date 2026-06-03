@@ -5,6 +5,8 @@
 snowflake:
   # Org-account identifier in <orgname>-<account_name> format
   # (Snowsight -> bottom-left account menu). Do NOT use the account locator.
+  # If your account name contains underscores, the agent converts them to
+  # hyphens for the URL automatically (Snowflake hostnames use hyphens).
   account: <your-org>-<your-account>
   user: <your-snowflake-user>
   # Programmatic Access Token (PAT). Looks like eyJ...  Treat as a secret.

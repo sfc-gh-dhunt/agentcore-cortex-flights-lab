@@ -94,8 +94,13 @@ if _missing:
         + ". Copy config.yaml.example to config.yaml and fill it in."
     )
 
+# Snowflake account hostnames use hyphens, not underscores. If the account
+# identifier is entered with underscores (e.g. ORG-ACME_PROD), Python's TLS
+# verification rejects the underscore hostname even though curl tolerates it.
+# Convert underscores to hyphens for the URL host only.
+_ACCOUNT_HOST = SNOWFLAKE_ACCOUNT.replace("_", "-")
 MCP_URL = (
-    f"https://{SNOWFLAKE_ACCOUNT}.snowflakecomputing.com"
+    f"https://{_ACCOUNT_HOST}.snowflakecomputing.com"
     f"/api/v2/databases/{SNOWFLAKE_DATABASE}/schemas/{SNOWFLAKE_SCHEMA}"
     f"/mcp-servers/{MCP_SERVER_NAME}"
 )

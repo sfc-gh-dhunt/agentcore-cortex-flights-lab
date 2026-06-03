@@ -30,8 +30,9 @@ def load_config():
 
 def mcp_url(cfg):
     sf, mcp = cfg.get("snowflake", {}), cfg.get("mcp", {})
+    host = sf["account"].replace("_", "-")  # Snowflake hostnames use hyphens, not underscores
     return (
-        f"https://{sf['account']}.snowflakecomputing.com"
+        f"https://{host}.snowflakecomputing.com"
         f"/api/v2/databases/{sf['database']}/schemas/{sf['schema']}"
         f"/mcp-servers/{mcp['server_name']}"
     )
