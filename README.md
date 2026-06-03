@@ -81,24 +81,9 @@ The deployable agent lives in [agentcore/](agentcore/):
 
 It reads everything from `config.yaml` - the same agent works against any Snowflake MCP server. Set `mcp.tools` to just your Cortex Agent tool for a clean question-to-answer experience.
 
-## Quick Start (on the EC2 instance)
+## Getting Started
 
-Connect to the EC2 instance: AWS Console -> **EC2** -> **Instances** -> select the `*-ec2` instance -> **Connect** -> **Session Manager** tab -> **Connect**. Stay as the default `ssm-user` (don't `sudo` to another user or override `HOME` - the instance's pre-configured AWS profile has the deploy permissions). The instance has no `git`, so download a tarball:
-
-```sh
-export HOME=/home/ssm-user
-cd ~
-REPO_TGZ="https://github.com/sfc-gh-dhunt/agentcore-cortex-flights-lab/archive/refs/heads/main.tar.gz"
-curl -fsSL "$REPO_TGZ" -o lab.tgz && TOP=$(tar tzf lab.tgz | head -1) && tar xzf lab.tgz && cd "${TOP}agentcore"
-cp config.yaml.example config.yaml   # then edit: account, PAT, database, schema, MCP server name
-export AGENT_MODEL_ID=us.anthropic.claude-sonnet-4-6
-agentcore configure -e snowflake_mcp_agentcore.py -rf requirements.txt -r us-east-1 -ni
-agentcore launch --env AGENT_MODEL_ID=$AGENT_MODEL_ID
-sh fix_permissions.sh
-agentcore invoke '{"prompt": "Which airline had the most delays recently?"}'
-```
-
-See [lab/04](lab/04-deploy-agentcore-runtime.md) for the full walkthrough.
+Work through the lab sections in order, starting with **[00 - Environment Check](lab/00-environment-check.md)**. You build the Snowflake objects first (semantic view → Cortex Agent → MCP server), then deploy and test the AgentCore Runtime agent on AWS. Each section links to the next.
 
 ## Troubleshooting
 

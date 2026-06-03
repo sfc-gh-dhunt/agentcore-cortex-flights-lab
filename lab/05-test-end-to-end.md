@@ -48,8 +48,8 @@ It reads the runtime ARN from `.bedrock_agentcore.yaml` (or pass `--arn`).
 **Connectivity / empty data**
 - Re-run the `tools/list` curl from section 04 step 3. If that fails, the PAT, account format, or grants are the issue - not the agent.
 
-**`Permission denied` writing `.bedrock_agentcore.yaml`**
-- You switched Linux users or changed `HOME`. Work as `ssm-user` from a directory you own (your home), and don't override `HOME`.
+**`Permission denied` writing `.bedrock_agentcore.yaml`** or **`curl: (23) ... ERROR on write`**
+- Your shell is in a non-writable directory (e.g. `/usr/bin`). Work from `/tmp` (`cd /tmp` before downloading/deploying). Keep `HOME=/home/ssm-user` so AWS creds resolve - don't point `HOME` at `/tmp`, and don't switch Linux users.
 
 **Changes not taking effect**
 - Edit `config.yaml`, then redeploy: `agentcore launch --env AGENT_MODEL_ID=$AGENT_MODEL_ID` (rebuilds the image).

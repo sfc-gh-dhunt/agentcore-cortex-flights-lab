@@ -6,20 +6,33 @@ Deploy the agent to **Amazon Bedrock AgentCore Runtime**. It connects to the Sno
 
 > Important environment notes (read first):
 > - **Stay as the default `ssm-user`.** Do not `sudo su` to another user - the deploy writes local files, and switching users causes `Permission denied` on files owned by `ssm-user`.
-> - **Do not override `HOME`.** The instance ships with pre-configured AWS credentials (a default profile that has deploy permissions). If you change `HOME`, the CLI falls back to the EC2 instance role, which cannot create ECR/runtime resources.
+> - **Work from a writable directory.** Your Session Manager shell may start in `/usr/bin` (not writable). Use `/tmp`, which is always writable.
+> - **Keep `HOME=/home/ssm-user` (do not point it at `/tmp`).** The instance ships with pre-configured AWS credentials in `~/.aws`. If you change `HOME`, the CLI falls back to the EC2 instance role, which cannot create ECR/runtime resources.
 > - The instance has **no `git`** - we download a release tarball with `curl` instead.
 
 ## Step 1: Download the lab (no git required)
 
+Run these one at a time (pasting the whole block into Session Manager can mangle line breaks).
+
 ```sh
-export HOME=/home/ssm-user
-cd ~
+export HOME=/home/ssm-user      # for AWS creds in ~/.aws
+cd /tmp                          # writable working directory
+pwd                              # confirm: /tmp (NOT /usr/bin)
+```
+
+```sh
 REPO_TGZ="https://github.com/sfc-gh-dhunt/agentcore-cortex-flights-lab/archive/refs/heads/main.tar.gz"
-curl -fsSL "$REPO_TGZ" -o lab.tgz
-TOP=$(tar tzf lab.tgz | head -1)        # agentcore-cortex-flights-lab-main/
+curl -fL "$REPO_TGZ" -o lab.tgz
+ls -l lab.tgz                    # should be a few hundred KB
+file lab.tgz                     # should say: gzip compressed data
+```
+
+Only if `file` reports gzip, extract and enter the `agentcore` directory:
+
+```sh
 tar xzf lab.tgz
-cd "${TOP}agentcore"
-pwd && ls
+cd agentcore-cortex-flights-lab-main/agentcore
+pwd && ls                        # you should see snowflake_mcp_agentcore.py, config.yaml.example
 ```
 
 ## Step 2: Configure your Snowflake connection
